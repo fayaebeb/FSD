@@ -11,14 +11,29 @@
 </head>
 
 <body>
+    <!-- Theme Switcher -->
+    <div class="theme-switcher">
+        <button class="theme-toggle" aria-label="テーマ切り替え">
+            <span class="theme-icon">🌙</span>
+        </button>
+    </div>
+
+    <!-- Scroll Progress Indicator -->
+    <div class="scroll-progress">
+        <div class="scroll-progress-bar"></div>
+    </div>
+
+    <!-- Cursor Trail -->
+    <div class="cursor-trail"></div>
+
     <header class="header">
         <div class="container">
             <div class="header-content">
                 <div class="logo-section">
                     <img src="images/pckk.png" alt="パシフィックコンサルタンツ" class="company-logo">
                     <div class="company-info">
-                        <h1 class="company-name">パシフィックコンサルタンツ株式会社</h1>
-                        <h2 class="department-name">サービス創生室【FSD】</h2>
+                        <h1 class="company-name typing-text" data-text="パシフィックコンサルタンツ株式会社">パシフィックコンサルタンツ株式会社</h1>
+                        <h2 class="department-name typing-text" data-text="サービス創生室【FSD】">サービス創生室【FSD】</h2>
                     </div>
                 </div>
                 <!-- <p class="tagline">革新的なデジタルソリューションの創造</p> -->
@@ -227,6 +242,32 @@
             <p>&copy; 2025 パシフィックコンサルタンツ株式会社 サービス創生室【FSD】</p>
         </div>
     </footer>
+
+    <!-- Floating Action Button -->
+    <div class="fab-container">
+        <button class="fab" aria-label="メニュー">
+            <span class="fab-icon">✨</span>
+        </button>
+        <div class="fab-menu">
+            <button class="fab-item" data-action="top" aria-label="トップへ">↑</button>
+            <button class="fab-item" data-action="theme" aria-label="テーマ">🎨</button>
+            <button class="fab-item" data-action="sound" aria-label="サウンド">🔊</button>
+        </div>
+    </div>
+
+    <!-- Sound Effects -->
+    <div class="sound-effects" style="display: none;">
+        <audio id="hover-sound" preload="auto">
+            <source
+                src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT"
+                type="audio/wav">
+        </audio>
+        <audio id="click-sound" preload="auto">
+            <source
+                src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT"
+                type="audio/wav">
+        </audio>
+    </div>
 
     <script src="script.js"></script>
 </body>
