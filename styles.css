@@ -1123,3 +1123,124 @@ body.light-theme .product-description {
     outline: 2px solid rgba(100, 181, 246, 0.8);
     outline-offset: 2px;
 }
+
+/* Sakura Theme */
+body.sakura-theme {
+    background: linear-gradient(135deg, #fff0f6 0%, #fde2ec 25%, #f8cfe0 50%, #f6bcd1 100%);
+    color: #4a3a3a;
+}
+
+body.sakura-theme .header,
+body.sakura-theme .footer {
+    background: rgba(255, 240, 246, 0.95);
+    color: #4a3a3a;
+}
+
+body.sakura-theme .header::before {
+    background: linear-gradient(45deg, transparent, rgba(255, 182, 193, 0.15), transparent);
+}
+
+body.sakura-theme .footer::before {
+    background: linear-gradient(90deg, transparent, rgba(255, 182, 193, 0.8), transparent);
+}
+
+body.sakura-theme .company-name {
+    color: #4a3a3a;
+    text-shadow: 0 2px 4px rgba(255, 182, 193, 0.25);
+}
+
+body.sakura-theme .department-name {
+    background: linear-gradient(135deg, #ff9ec7, #ff7fb3);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+body.sakura-theme .decoration-line {
+    background: linear-gradient(to right, rgba(255, 182, 193, 0.8), transparent);
+}
+
+body.sakura-theme .decoration-dot {
+    background: radial-gradient(circle, rgba(255, 182, 193, 0.8), rgba(255, 255, 255, 0.9));
+    box-shadow: 0 4px 12px rgba(255, 182, 193, 0.4);
+}
+
+body.sakura-theme .decoration-dot::before {
+    border-color: rgba(255, 182, 193, 0.35);
+}
+
+body.sakura-theme .product-card {
+    background: rgba(255, 255, 255, 0.9);
+    color: #4a3a3a;
+    border: 1px solid rgba(255, 182, 193, 0.35);
+    box-shadow: 0 10px 30px rgba(255, 182, 193, 0.25);
+}
+
+body.sakura-theme .product-name {
+    color: #703d57;
+}
+
+body.sakura-theme .product-description {
+    color: rgba(74, 58, 58, 0.8);
+}
+
+body.sakura-theme .product-link {
+    background: linear-gradient(135deg, #ff9ec7, #ff6fb5);
+    box-shadow: 0 4px 15px rgba(255, 182, 193, 0.4);
+}
+
+body.sakura-theme .product-link:hover {
+    background: linear-gradient(135deg, #ff6fb5, #ff3d9a);
+    box-shadow: 0 8px 25px rgba(255, 182, 193, 0.45);
+}
+
+body.sakura-theme .external-icon,
+body.sakura-theme .product-link:hover .external-icon {
+    color: #702f52;
+}
+
+body.sakura-theme .scroll-progress-bar {
+    background: linear-gradient(90deg, #ff9ec7, #ff6fb5, #ff3d9a);
+    box-shadow: 0 0 10px rgba(255, 182, 193, 0.5);
+}
+
+body.sakura-theme .cursor-trail {
+    background: radial-gradient(circle, rgba(255, 182, 193, 0.85), transparent);
+}
+
+body.sakura-theme .cursor-particle {
+    background: rgba(255, 182, 193, 0.6);
+}
+
+body.sakura-theme .sound-wave {
+    border-color: rgba(255, 182, 193, 0.6);
+}
+
+body.sakura-theme .card-back {
+    background: rgba(255, 182, 193, 0.12);
+}
+
+/* Sakura typing caret */
+@keyframes sakura-blink-caret {
+    from, to { border-color: transparent; }
+    50% { border-color: rgba(255, 182, 193, 0.8); }
+}
+body.sakura-theme .typing-text {
+    border-right: 2px solid rgba(255, 182, 193, 0.8);
+    animation: typing 3s steps(40, end), sakura-blink-caret 0.75s step-end infinite;
+}
+
+/* Sakura-themed particles */
+body.sakura-theme .particle-1,
+body.sakura-theme .particle-2,
+body.sakura-theme .particle-3 {
+    background: rgba(255, 182, 193, 0.55);
+}
+
+/* Sakura focus states */
+body.sakura-theme .theme-toggle:focus,
+body.sakura-theme .fab:focus,
+body.sakura-theme .fab-item:focus,
+body.sakura-theme .product-card:focus {
+    outline: 2px solid rgba(255, 182, 193, 0.8);
+}

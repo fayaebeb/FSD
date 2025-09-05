@@ -196,32 +196,42 @@ function createParticle(container) {
     }, duration * 1000);
 }
 
-// Theme Switcher
+// Theme Switcher (Dark → Light → Sakura)
 function initializeThemeSwitcher() {
     const themeToggle = document.querySelector('.theme-toggle');
     const themeIcon = document.querySelector('.theme-icon');
 
-    let isDark = true;
+    const themes = ['dark', 'light', 'sakura'];
+
+    function applyTheme(theme) {
+        document.body.classList.remove('light-theme', 'sakura-theme');
+        if (theme === 'light') {
+            document.body.classList.add('light-theme');
+            themeIcon.textContent = '☀️';
+        } else if (theme === 'sakura') {
+            document.body.classList.add('sakura-theme');
+            themeIcon.textContent = '🌸';
+        } else {
+            // dark (default)
+            themeIcon.textContent = '🌙';
+        }
+        localStorage.setItem('theme', theme);
+        document.body.setAttribute('data-theme', theme);
+    }
+
+    // Determine initial theme
+    let currentTheme = localStorage.getItem('theme') || 'dark';
+    applyTheme(currentTheme);
 
     themeToggle.addEventListener('click', (e) => {
-        isDark = !isDark;
-        document.body.classList.toggle('light-theme', !isDark);
-        themeIcon.textContent = isDark ? '🌙' : '☀️';
+        // Cycle to next theme
+        const idx = themes.indexOf(currentTheme);
+        currentTheme = themes[(idx + 1) % themes.length];
+        applyTheme(currentTheme);
 
         playSoundEffect('click');
         createRipple(e, themeToggle);
-
-        // Save preference
-        localStorage.setItem('theme', isDark ? 'dark' : 'light');
     });
-
-    // Load saved theme
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'light') {
-        isDark = false;
-        document.body.classList.add('light-theme');
-        themeIcon.textContent = '☀️';
-    }
 }
 
 // Cursor Trail Effect
