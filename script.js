@@ -43,6 +43,7 @@ function initializeAnimations() {
         card.addEventListener('mouseenter', () => {
             card.style.transform = 'translateY(-12px) scale(1.03)';
             createSoundWave(card);
+            playSoundEffect('hover');
         });
 
         card.addEventListener('mouseleave', () => {
@@ -202,13 +203,13 @@ function initializeThemeSwitcher() {
 
     let isDark = true;
 
-    themeToggle.addEventListener('click', () => {
+    themeToggle.addEventListener('click', (e) => {
         isDark = !isDark;
         document.body.classList.toggle('light-theme', !isDark);
         themeIcon.textContent = isDark ? '🌙' : '☀️';
 
         playSoundEffect('click');
-        createRipple(event, themeToggle);
+        createRipple(e, themeToggle);
 
         // Save preference
         localStorage.setItem('theme', isDark ? 'dark' : 'light');
@@ -361,17 +362,51 @@ function initializeSoundEffects() {
     }
 }
 
-function playSoundEffect(type) {
+function playAudioEl(el, { volume = 1.0, rate = 1.0, rewind = true } = {}) {
+  if (!el) return;
+  try {
+    if (rewind) el.currentTime = 0;
+    el.volume = volume;
+    el.playbackRate = rate;
+    const p = el.play();
+    if (p && typeof p.catch === 'function') {
+      p.catch(() => { /* ignore autoplay policy rejections until user interacts */ });
+    }
+  } catch (_) { /* no-op */ }
+}
+
+function playSoundEffect(type = 'click') {
     if (!soundEnabled) return;
 
     // Create visual sound effect instead of audio
-    createSoundWave(document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2));
+ createSoundWave(document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2));
+
+  // choose which audio to play
+  const hoverEl  = document.getElementById('hover-sound');   // from index.html
+  const clickEl  = document.getElementById('click-sound');   // from index.html
+  const customEl = document.getElementById('custom-sound');  // our new music
+  
+switch (type) {
+    case 'hover':
+      playAudioEl(hoverEl, { volume: 0.6 });
+      playAudioEl(customEl, { volume: 0.4, rewind: false }); // layer it softly
+      break;
+    case 'custom':
+      playAudioEl(customEl, { volume: 1.0, rewind: false });
+      break;
+    case 'click':
+    default:
+      playAudioEl(clickEl, { volume: 0.9 });
+      playAudioEl(customEl, { volume: 0.7, rewind: false });
+      break;
+  }
 }
 
 function toggleSoundEffects() {
-    soundEnabled = !soundEnabled;
-    const soundButton = document.querySelector('[data-action="sound"]');
-    soundButton.textContent = soundEnabled ? '🔊' : '🔇';
+  soundEnabled = !soundEnabled;
+  const soundButton = document.querySelector('[data-action="sound"]');
+  soundButton.textContent = soundEnabled ? '🔊' : '🔇';
+  document.querySelectorAll('audio').forEach(a => (a.muted = !soundEnabled));
 }
 
 function createSoundWave(element) {
