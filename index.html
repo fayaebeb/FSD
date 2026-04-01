@@ -53,8 +53,93 @@
                 <p>サービス創生室では、最新のAI技術とデジタル技術を活用した革新的なソリューションを開発しています。</p>
             </section> -->
 
-            <section class="products-grid">
-                <div class="product-card">
+            <section class="innovation-hub" aria-labelledby="innovation-title">
+                <div class="innovation-panel innovation-overview">
+                    <div class="innovation-copy">
+                        <p class="innovation-eyebrow">Innovation Navigator</p>
+                        <h3 id="innovation-title">FSDポートフォリオを、探せるサイトへ。</h3>
+                        <p class="innovation-lead">
+                            案件を機能軸で見つけ、注目プロダクトを即座に把握できるナビゲーションレイヤーを追加しました。
+                            単なる一覧ではなく、用途から辿れる体験に変えています。
+                        </p>
+                    </div>
+
+                    <div class="innovation-stats" aria-label="ポートフォリオ統計">
+                        <article class="innovation-stat">
+                            <span class="innovation-stat-value" data-stat="total">0</span>
+                            <span class="innovation-stat-label">公開中プロダクト</span>
+                        </article>
+                        <article class="innovation-stat">
+                            <span class="innovation-stat-value" data-stat="ai">0</span>
+                            <span class="innovation-stat-label">AI活用案件</span>
+                        </article>
+                        <article class="innovation-stat">
+                            <span class="innovation-stat-value" data-stat="geo">0</span>
+                            <span class="innovation-stat-label">地図・GIS案件</span>
+                        </article>
+                        <article class="innovation-stat">
+                            <span class="innovation-stat-value" data-stat="simulation">0</span>
+                            <span class="innovation-stat-label">シミュレーション案件</span>
+                        </article>
+                    </div>
+
+                    <div class="innovation-controls">
+                        <label class="innovation-search" for="project-search">
+                            <span class="innovation-search-label">案件検索</span>
+                            <input
+                                id="project-search"
+                                type="search"
+                                placeholder="案件名・機能・キーワードで検索"
+                                autocomplete="off">
+                        </label>
+
+                        <div class="innovation-filters" id="innovation-filters" aria-label="案件フィルター"></div>
+                        <p class="innovation-results" id="innovation-results">すべての案件を表示中</p>
+                    </div>
+                </div>
+
+                <aside class="innovation-panel innovation-spotlight" aria-live="polite">
+                    <p class="spotlight-label">Spotlight</p>
+                    <div class="spotlight-visual">
+                        <div class="spotlight-ring spotlight-ring-a"></div>
+                        <div class="spotlight-ring spotlight-ring-b"></div>
+                        <img id="spotlight-image" src="assets/images/mirai.png" alt="注目案件プレビュー">
+                    </div>
+
+                    <div class="spotlight-content">
+                        <div class="spotlight-heading">
+                            <div>
+                                <p class="spotlight-kicker">現在の注目案件</p>
+                                <h4 id="spotlight-name">ミライ</h4>
+                            </div>
+                            <span class="product-status status-live" id="spotlight-status">運用中</span>
+                        </div>
+
+                        <p class="spotlight-description" id="spotlight-description">
+                            AI知識検索・インターネット検索・音声対話・ノート管理・マインドマップ・TODO機能を統合した次世代プラットフォーム
+                        </p>
+
+                        <div class="spotlight-tags" id="spotlight-tags"></div>
+
+                        <div class="spotlight-actions">
+                            <a id="spotlight-link" href="https://mirai-lhj9h.ondigitalocean.app/" target="_blank" class="product-link">
+                                注目案件を開く
+                                <svg class="external-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="2">
+                                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                    <polyline points="15,3 21,3 21,9"></polyline>
+                                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                                </svg>
+                            </a>
+                            <button type="button" class="spotlight-secondary" id="spotlight-jump">カードへ移動</button>
+                            <button type="button" class="spotlight-secondary" id="spotlight-copy">共有リンクをコピー</button>
+                        </div>
+                    </div>
+                </aside>
+            </section>
+
+            <section class="products-grid" id="projects-grid">
+                <div class="product-card" id="project-sakura-ai" data-categories="ai,voice,search" data-tags="音声対話,知識検索,インターネット検索" data-priority="8">
                     <div class="product-header">
                         <h4 class="product-name">桜AI</h4>
                         <span class="product-status status-live">運用中</span>
@@ -74,7 +159,7 @@
                     </a>
                 </div>
 
-                <div class="product-card">
+                <div class="product-card" id="project-sakura-moderator" data-categories="ai,admin,voice" data-tags="管理者機能,モデレーション,音声対話" data-priority="6">
                     <div class="product-header">
                         <h4 class="product-name">桜AI モデレーター版</h4>
                         <span class="product-status status-live">運用中</span>
@@ -94,7 +179,7 @@
                     </a>
                 </div>
 
-                <div class="product-card">
+                <div class="product-card" id="project-mirai" data-categories="ai,workspace,voice" data-tags="知識検索,ノート管理,TODO,マインドマップ" data-priority="10">
                     <div class="product-header">
                         <h4 class="product-name">ミライ</h4>
                         <span class="product-status status-live">運用中</span>
@@ -114,7 +199,7 @@
                     </a>
                 </div>
 
-                <div class="product-card">
+                <div class="product-card" id="project-mirai-moderator" data-categories="ai,admin,workspace" data-tags="管理者機能,運用支援,ワークスペース" data-priority="7">
                     <div class="product-header">
                         <h4 class="product-name">ミライ モデレーター版</h4>
                         <span class="product-status status-live">運用中</span>
@@ -134,7 +219,7 @@
                     </a>
                 </div>
 
-                <div class="product-card">
+                <div class="product-card" id="project-data-map" data-categories="geo,data" data-tags="地図可視化,店舗データ,都市分析" data-priority="5">
                     <div class="product-header">
                         <h4 class="product-name">データマップ</h4>
                         <span class="product-status status-live">運用中</span>
@@ -154,7 +239,7 @@
                     </a>
                 </div>
 
-                <div class="product-card">
+                <div class="product-card" id="project-mobility-twin" data-categories="ai,simulation,mobility" data-tags="交通流,シミュレーション,モビリティ" data-priority="9">
                     <div class="product-header">
                         <h4 class="product-name">MobilityTwin</h4>
                         <span class="product-status status-live">運用中</span>
@@ -174,7 +259,7 @@
                     </a>
                 </div>
 
-                <div class="product-card">
+                <div class="product-card" id="project-dtsb" data-categories="simulation,data" data-tags="シミュレーション,分析,実験" data-priority="4">
                     <div class="product-header">
                         <h4 class="product-name">DTSB</h4>
                         <span class="product-status status-live">運用中</span>
@@ -194,7 +279,7 @@
                     </a>
                 </div>
 
-                <div class="product-card">
+                <div class="product-card" id="project-map-ai" data-categories="ai,geo" data-tags="GIS,地理情報,AI統合" data-priority="8">
                     <div class="product-header">
                         <h4 class="product-name">マップAI</h4>
                         <span class="product-status status-live">運用中</span>
@@ -214,7 +299,7 @@
                     </a>
                 </div>
 
-                <div class="product-card">
+                <div class="product-card" id="project-frameark" data-categories="geo,data" data-tags="MapLibre,地域特化,インタラクティブマップ" data-priority="5">
                     <div class="product-header">
                         <h4 class="product-name">FrameArk</h4>
                         <span class="product-status status-live">運用中</span>
@@ -234,7 +319,7 @@
                     </a>
                 </div>
 
-                <div class="product-card">
+                <div class="product-card" id="project-otaru-map-ai" data-categories="ai,geo,tourism" data-tags="観光DX,オーバーツーリズム,GIS" data-priority="7">
                     <div class="product-header">
                         <h4 class="product-name">小樽マップAI</h4>
                         <span class="product-status status-live">運用中</span>
@@ -254,7 +339,7 @@
                     </a>
                 </div>
 
-                <div class="product-card">
+                <div class="product-card" id="project-otaru-data" data-categories="data,tourism" data-tags="データ収集,プレゼンテーション,観光分析" data-priority="4">
                     <div class="product-header">
                         <h4 class="product-name">小樽データ収集結果</h4>
                         <span class="product-status status-live">運用中</span>
@@ -274,6 +359,11 @@
                     </a>
                 </div>
             </section>
+
+            <div class="products-empty" id="products-empty" hidden>
+                <p>該当する案件が見つかりませんでした。検索語を変えるか、フィルターを解除してください。</p>
+                <button type="button" class="spotlight-secondary" id="reset-filters">すべて表示する</button>
+            </div>
         </div>
     </main>
 

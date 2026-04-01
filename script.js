@@ -2,6 +2,7 @@
 document.addEventListener('DOMContentLoaded', function () {
     // Initialize all features
     initializeFooterYear();
+    initializeInnovationHub();
     initializeAnimations();
     initializeInteractions();
     initializeParallax();
@@ -22,6 +23,327 @@ function initializeFooterYear() {
     if (currentYear) {
         currentYear.textContent = new Date().getFullYear();
     }
+}
+
+function initializeInnovationHub() {
+    const searchInput = document.getElementById('project-search');
+    const filtersContainer = document.getElementById('innovation-filters');
+    const resultsEl = document.getElementById('innovation-results');
+    const emptyState = document.getElementById('products-empty');
+    const resetButton = document.getElementById('reset-filters');
+    const spotlightImage = document.getElementById('spotlight-image');
+    const spotlightName = document.getElementById('spotlight-name');
+    const spotlightStatus = document.getElementById('spotlight-status');
+    const spotlightDescription = document.getElementById('spotlight-description');
+    const spotlightTags = document.getElementById('spotlight-tags');
+    const spotlightLink = document.getElementById('spotlight-link');
+    const spotlightJump = document.getElementById('spotlight-jump');
+    const spotlightCopy = document.getElementById('spotlight-copy');
+    const statValues = document.querySelectorAll('[data-stat]');
+    const cards = Array.from(document.querySelectorAll('.product-card'));
+
+    if (!searchInput || !filtersContainer || !resultsEl || !cards.length) {
+        return;
+    }
+
+    const filters = [
+        { id: 'all', label: 'すべて' },
+        { id: 'ai', label: 'AI' },
+        { id: 'geo', label: '地図 / GIS' },
+        { id: 'simulation', label: 'シミュレーション' },
+        { id: 'admin', label: '管理者向け' }
+    ];
+
+    const projects = cards.map((card, index) => {
+        const name = card.querySelector('.product-name')?.textContent.trim() || `Project ${index + 1}`;
+        const description = card.querySelector('.product-description')?.textContent.trim() || '';
+        const link = card.querySelector('.product-link');
+        const image = card.querySelector('.project-image');
+        const status = card.querySelector('.product-status');
+        const categories = (card.dataset.categories || '')
+            .split(',')
+            .map(value => value.trim())
+            .filter(Boolean);
+        const tags = (card.dataset.tags || '')
+            .split(',')
+            .map(value => value.trim())
+            .filter(Boolean);
+
+        return {
+            card,
+            link,
+            image,
+            name,
+            description,
+            statusText: status?.textContent.trim() || '公開中',
+            statusClass: status?.className || 'product-status status-live',
+            categories,
+            tags,
+            priority: Number(card.dataset.priority || 0),
+            searchText: normalizeText([name, description, categories.join(' '), tags.join(' ')].join(' '))
+        };
+    });
+
+    let activeFilter = 'all';
+    let selectedProject = projects.reduce((best, project) => {
+        if (!best || project.priority > best.priority) {
+            return project;
+        }
+
+        return best;
+    }, null);
+
+    renderFilters();
+    updateStats(statValues, projects);
+
+    projects.forEach(project => {
+        project.card.addEventListener('mouseenter', () => setSelectedProject(project));
+        project.card.addEventListener('focus', () => setSelectedProject(project));
+        project.card.addEventListener('click', event => {
+            if (event.target.closest('.product-link')) {
+                return;
+            }
+
+            setSelectedProject(project);
+        });
+    });
+
+    searchInput.addEventListener('input', () => {
+        applyFilters();
+    });
+
+    filtersContainer.addEventListener('click', event => {
+        const button = event.target.closest('.innovation-filter');
+
+        if (!button) {
+            return;
+        }
+
+        activeFilter = button.dataset.filter || 'all';
+        syncFilterButtons();
+        applyFilters();
+        playSoundEffect('click');
+    });
+
+    spotlightJump?.addEventListener('click', () => {
+        if (!selectedProject) {
+            return;
+        }
+
+        selectedProject.card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        selectedProject.card.focus({ preventScroll: true });
+    });
+
+    spotlightCopy?.addEventListener('click', async () => {
+        if (!selectedProject) {
+            return;
+        }
+
+        const shareUrl = new URL(window.location.href);
+        shareUrl.hash = selectedProject.card.id;
+
+        try {
+            await navigator.clipboard.writeText(shareUrl.toString());
+            flashButtonState(spotlightCopy, 'コピーしました');
+        } catch (_) {
+            flashButtonState(spotlightCopy, 'コピー不可');
+        }
+    });
+
+    resetButton?.addEventListener('click', () => {
+        searchInput.value = '';
+        activeFilter = 'all';
+        syncFilterButtons();
+        applyFilters();
+    });
+
+    const hashTarget = window.location.hash.replace('#', '');
+    const hashMatch = hashTarget
+        ? projects.find(project => project.card.id === hashTarget)
+        : null;
+
+    if (hashMatch) {
+        selectedProject = hashMatch;
+    }
+
+    syncFilterButtons();
+    applyFilters({ updateHash: false });
+
+    function renderFilters() {
+        filtersContainer.innerHTML = filters
+            .map(filter => `
+                <button type="button" class="innovation-filter" data-filter="${filter.id}">
+                    ${filter.label}
+                </button>
+            `)
+            .join('');
+    }
+
+    function syncFilterButtons() {
+        filtersContainer.querySelectorAll('.innovation-filter').forEach(button => {
+            const isActive = button.dataset.filter === activeFilter;
+            button.classList.toggle('is-active', isActive);
+            button.setAttribute('aria-pressed', String(isActive));
+        });
+    }
+
+    function applyFilters({ updateHash = true } = {}) {
+        const query = normalizeText(searchInput.value);
+        const visibleProjects = projects.filter(project => matchesProject(project, query, activeFilter));
+
+        projects.forEach(project => {
+            const isVisible = visibleProjects.includes(project);
+            project.card.classList.toggle('is-hidden', !isVisible);
+            project.card.hidden = !isVisible;
+            project.card.setAttribute('aria-hidden', String(!isVisible));
+        });
+
+        emptyState.hidden = visibleProjects.length > 0;
+        resultsEl.textContent = buildResultsLabel(visibleProjects.length, query, activeFilter);
+
+        if (!visibleProjects.length) {
+            selectedProject = null;
+            renderEmptySpotlight();
+            return;
+        }
+
+        if (!selectedProject || !visibleProjects.includes(selectedProject)) {
+            selectedProject = visibleProjects.reduce((best, project) => {
+                if (!best || project.priority > best.priority) {
+                    return project;
+                }
+
+                return best;
+            }, null);
+        }
+
+        setSelectedProject(selectedProject, { updateHash });
+    }
+
+    function setSelectedProject(project, { updateHash = true } = {}) {
+        if (!project) {
+            return;
+        }
+
+        selectedProject = project;
+
+        projects.forEach(entry => {
+            entry.card.classList.toggle('is-selected', entry === project);
+        });
+
+        spotlightImage.src = project.image?.getAttribute('src') || 'assets/images/pckk.png';
+        spotlightImage.alt = `${project.name}のプレビュー`;
+        spotlightName.textContent = project.name;
+        spotlightStatus.textContent = project.statusText;
+        spotlightStatus.className = project.statusClass;
+        spotlightDescription.textContent = project.description;
+        spotlightTags.innerHTML = project.tags
+            .map(tag => `<span class="spotlight-tag">${tag}</span>`)
+            .join('');
+
+        spotlightLink.href = project.link?.href || '#';
+        spotlightLink.removeAttribute('aria-disabled');
+        spotlightLink.tabIndex = 0;
+        spotlightJump.disabled = false;
+        spotlightCopy.disabled = false;
+
+        if (updateHash) {
+            history.replaceState(null, '', `${window.location.pathname}${window.location.search}#${project.card.id}`);
+        }
+    }
+
+    function renderEmptySpotlight() {
+        projects.forEach(project => project.card.classList.remove('is-selected'));
+        spotlightImage.src = 'assets/images/pckk.png';
+        spotlightImage.alt = '該当案件なし';
+        spotlightName.textContent = '該当案件がありません';
+        spotlightStatus.textContent = '再検索';
+        spotlightStatus.className = 'product-status status-dev';
+        spotlightDescription.textContent = '検索語を変えるか、フィルターを解除すると別の案件が表示されます。';
+        spotlightTags.innerHTML = '<span class="spotlight-tag">検索条件を調整</span>';
+        spotlightLink.removeAttribute('href');
+        spotlightLink.setAttribute('aria-disabled', 'true');
+        spotlightLink.tabIndex = -1;
+        spotlightJump.disabled = true;
+        spotlightCopy.disabled = true;
+    }
+
+    function updateStats(nodes, entries) {
+        const stats = {
+            total: entries.length,
+            ai: entries.filter(entry => entry.categories.includes('ai')).length,
+            geo: entries.filter(entry => entry.categories.includes('geo')).length,
+            simulation: entries.filter(entry => entry.categories.includes('simulation')).length
+        };
+
+        nodes.forEach(node => {
+            const value = stats[node.dataset.stat] ?? 0;
+            animateCount(node, value);
+        });
+    }
+
+    function animateCount(node, target) {
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            node.textContent = String(target);
+            return;
+        }
+
+        const duration = 700;
+        const startTime = performance.now();
+
+        function step(now) {
+            const progress = Math.min((now - startTime) / duration, 1);
+            node.textContent = String(Math.round(target * progress));
+
+            if (progress < 1) {
+                requestAnimationFrame(step);
+            }
+        }
+
+        requestAnimationFrame(step);
+    }
+
+    function buildResultsLabel(count, query, filterId) {
+        const filterLabel = filters.find(filter => filter.id === filterId)?.label || 'すべて';
+
+        if (query) {
+            return `「${searchInput.value.trim()}」で ${count} 件表示中 / フィルター: ${filterLabel}`;
+        }
+
+        if (filterId !== 'all') {
+            return `${filterLabel} の案件を ${count} 件表示中`;
+        }
+
+        return `${count} 件の案件を表示中`;
+    }
+
+    function matchesProject(project, query, filterId) {
+        const matchesQuery = !query || project.searchText.includes(query);
+        const matchesFilter = filterId === 'all' || project.categories.includes(filterId);
+
+        return matchesQuery && matchesFilter;
+    }
+
+    function flashButtonState(button, text) {
+        const originalText = button.dataset.originalText || button.textContent;
+
+        button.dataset.originalText = originalText;
+        button.textContent = text;
+        button.classList.add('is-success');
+        clearTimeout(button._flashTimer);
+
+        button._flashTimer = setTimeout(() => {
+            button.textContent = originalText;
+            button.classList.remove('is-success');
+        }, 1400);
+    }
+}
+
+function normalizeText(value) {
+    return (value || '')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim();
 }
 
 // Core Animation System
