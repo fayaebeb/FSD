@@ -138,7 +138,10 @@
                 </aside>
             </section>
 
-            <section class="game-lab" aria-labelledby="game-lab-title">
+            <div class="game-modal" id="game-modal" hidden>
+                <div class="game-modal-backdrop" id="game-modal-backdrop"></div>
+                <section class="game-lab" aria-labelledby="game-lab-title" role="dialog" aria-modal="true" aria-label="FSD Signal Runner">
+                    <button type="button" class="game-modal-close" id="game-modal-close" aria-label="ゲームを閉じる">×</button>
                 <div class="game-lab-copy">
                     <p class="game-lab-eyebrow">Playable Layer</p>
                     <h3 id="game-lab-title">FSD Signal Runner</h3>
@@ -259,7 +262,8 @@
                         </article>
                     </div>
                 </div>
-            </section>
+                </section>
+            </div>
 
             <section class="products-grid" id="projects-grid">
                 <div class="product-card" id="project-sakura-ai" data-categories="ai,voice,search" data-tags="音声対話,知識検索,インターネット検索" data-priority="8">
@@ -498,14 +502,10 @@
 
     <!-- Floating Action Button -->
     <div class="fab-container">
-        <button class="fab" aria-label="メニュー">
+        <button class="fab-audio" id="fab-audio" aria-label="サウンド切り替え" aria-pressed="true">🔊</button>
+        <button class="fab" aria-label="ゲームを開く" aria-controls="game-modal" aria-expanded="false">
             <span class="fab-icon">✨</span>
         </button>
-        <div class="fab-menu">
-            <button class="fab-item" data-action="top" aria-label="トップへ">↑</button>
-            <button class="fab-item" data-action="theme" aria-label="テーマ">🎨</button>
-            <button class="fab-item" data-action="sound" aria-label="サウンド">🔊</button>
-        </div>
     </div>
 
     <!-- Sound Effects -->

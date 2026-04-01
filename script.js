@@ -2,6 +2,7 @@
 document.addEventListener('DOMContentLoaded', function () {
     // Initialize all features
     initializeFooterYear();
+    initializeGameModal();
     initializeInnovationHub();
     initializeSignalRunner();
     initializeAnimations();
@@ -24,6 +25,75 @@ function initializeFooterYear() {
     if (currentYear) {
         currentYear.textContent = new Date().getFullYear();
     }
+}
+
+function initializeGameModal() {
+    const modal = document.getElementById('game-modal');
+    const backdrop = document.getElementById('game-modal-backdrop');
+    const closeButton = document.getElementById('game-modal-close');
+    const fab = document.querySelector('.fab');
+
+    if (!modal || !fab) {
+        return;
+    }
+
+    const openModal = () => {
+        modal.hidden = false;
+        requestAnimationFrame(() => {
+            modal.classList.add('is-open');
+        });
+        document.body.classList.add('game-modal-open');
+        fab.setAttribute('aria-expanded', 'true');
+        playSoundEffect('click');
+        closeButton?.focus();
+    };
+
+    const closeModal = async () => {
+        if (document.fullscreenElement) {
+            try {
+                await document.exitFullscreen();
+            } catch (_) {
+                // ignore exit errors
+            }
+        }
+
+        modal.classList.remove('is-open');
+        modal.hidden = true;
+        document.body.classList.remove('game-modal-open');
+        fab.setAttribute('aria-expanded', 'false');
+        fab.focus();
+        window.dispatchEvent(new CustomEvent('fsd:game-modal-closed'));
+    };
+
+    fab.addEventListener('click', () => {
+        if (modal.hidden) {
+            openModal();
+        } else {
+            closeModal();
+        }
+    });
+
+    backdrop?.addEventListener('click', () => {
+        closeModal();
+    });
+
+    closeButton?.addEventListener('click', () => {
+        closeModal();
+    });
+
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && !modal.hidden) {
+            closeModal();
+        }
+    });
+
+    window.addEventListener('fsd:open-game-modal', () => {
+        openModal();
+    });
+
+    window.addEventListener('fsd:close-game-modal', () => {
+        closeModal();
+    });
 }
 
 function initializeSignalRunner() {
@@ -137,6 +207,12 @@ function initializeSignalRunner() {
 
     document.addEventListener('fullscreenchange', () => {
         syncFullscreenButton();
+    });
+
+    window.addEventListener('fsd:game-modal-closed', () => {
+        if (state.running && !state.paused && !state.ended) {
+            togglePauseState();
+        }
     });
 
     pauseButton?.addEventListener('click', togglePauseState);
@@ -879,6 +955,7 @@ function initializeInnovationHub() {
     function applyFilters({ updateHash = true } = {}) {
         const query = normalizeText(searchInput.value);
         const visibleProjects = projects.filter(project => matchesProject(project, query, activeFilter));
+        const isShowingAllProjects = query === '' && activeFilter === 'all';
 
         projects.forEach(project => {
             const isVisible = visibleProjects.includes(project);
@@ -889,6 +966,10 @@ function initializeInnovationHub() {
 
         emptyState.hidden = visibleProjects.length > 0;
         resultsEl.textContent = buildResultsLabel(visibleProjects.length, query, activeFilter);
+        if (resetButton) {
+            resetButton.textContent = isShowingAllProjects ? 'すべて表示中' : 'すべて表示する';
+            resetButton.disabled = isShowingAllProjects;
+        }
 
         if (!visibleProjects.length) {
             selectedProject = null;
@@ -1342,7 +1423,7 @@ function initializeThemeSwitcher() {
     }
 
     // Determine initial theme
-    let currentTheme = localStorage.getItem('theme') || 'dark';
+    let currentTheme = localStorage.getItem('theme') || 'light';
     applyTheme(currentTheme);
 
     themeToggle.addEventListener('click', (e) => {
@@ -1416,42 +1497,22 @@ function initializeScrollProgress() {
 
 // Floating Action Button
 function initializeFloatingActionButton() {
-    const fabContainer = document.querySelector('.fab-container');
     const fab = document.querySelector('.fab');
-    const fabItems = document.querySelectorAll('.fab-item');
+    const audioButton = document.getElementById('fab-audio');
 
-    fab.addEventListener('click', () => {
-        fabContainer.classList.toggle('active');
-        playSoundEffect('click');
-    });
+    if (!fab) {
+        return;
+    }
 
-    fabItems.forEach(item => {
-        item.addEventListener('click', (e) => {
-            const action = e.target.dataset.action;
+    fab.classList.add('game-launcher-ready');
 
-            switch (action) {
-                case 'top':
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                    break;
-                case 'theme':
-                    document.querySelector('.theme-toggle').click();
-                    break;
-                case 'sound':
-                    toggleSoundEffects();
-                    break;
-            }
-
-            fabContainer.classList.remove('active');
+    if (audioButton) {
+        syncSoundButton(audioButton);
+        audioButton.addEventListener('click', () => {
+            toggleSoundEffects();
             playSoundEffect('click');
         });
-    });
-
-    // Close FAB menu when clicking outside
-    document.addEventListener('click', (e) => {
-        if (!fabContainer.contains(e.target)) {
-            fabContainer.classList.remove('active');
-        }
-    });
+    }
 }
 
 // Typing Animation
@@ -1492,6 +1553,8 @@ function initializeSoundEffects() {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         soundEnabled = false;
     }
+    document.querySelectorAll('audio').forEach(a => (a.muted = !soundEnabled));
+    syncSoundButton();
 }
 
 function syncThemeSoundtrack(theme) {
@@ -1549,9 +1612,15 @@ switch (type) {
 
 function toggleSoundEffects() {
   soundEnabled = !soundEnabled;
-  const soundButton = document.querySelector('[data-action="sound"]');
-  soundButton.textContent = soundEnabled ? '🔊' : '🔇';
   document.querySelectorAll('audio').forEach(a => (a.muted = !soundEnabled));
+  syncSoundButton();
+}
+
+function syncSoundButton(button = document.getElementById('fab-audio')) {
+  if (!button) return;
+  button.textContent = soundEnabled ? '🔊' : '🔇';
+  button.setAttribute('aria-pressed', String(soundEnabled));
+  button.setAttribute('aria-label', soundEnabled ? 'サウンドをミュート' : 'サウンドを有効化');
 }
 
 function createSoundWave(element) {
