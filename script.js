@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Initialize all features
     initializeFooterYear();
     initializeInnovationHub();
+    initializeSignalRunner();
     initializeAnimations();
     initializeInteractions();
     initializeParallax();
@@ -22,6 +23,680 @@ function initializeFooterYear() {
 
     if (currentYear) {
         currentYear.textContent = new Date().getFullYear();
+    }
+}
+
+function initializeSignalRunner() {
+    const canvas = document.getElementById('signal-runner');
+    const gameShell = document.querySelector('.game-shell');
+    const startButton = document.getElementById('game-start');
+    const pauseButton = document.getElementById('game-pause');
+    const fullscreenButton = document.getElementById('game-fullscreen');
+    const startInlineButton = document.getElementById('game-start-inline');
+    const pauseInlineButton = document.getElementById('game-pause-inline');
+    const exitFullscreenButton = document.getElementById('game-exit-fullscreen');
+    const rewardButton = document.getElementById('game-apply-reward');
+    const rewardText = document.getElementById('game-reward-text');
+    const characterGrid = document.getElementById('game-character-grid');
+    const currentPlayerEl = document.getElementById('game-current-player');
+    const overlay = document.getElementById('game-overlay');
+    const overlayTitle = document.getElementById('game-overlay-title');
+    const overlayText = document.getElementById('game-overlay-text');
+    const scoreEl = document.getElementById('game-score');
+    const timeEl = document.getElementById('game-time');
+    const bestEl = document.getElementById('game-best');
+
+    if (!canvas || !gameShell) {
+        return;
+    }
+
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+        return;
+    }
+
+    const width = canvas.width;
+    const height = canvas.height;
+    const bestKey = 'fsd-signal-runner-best';
+    const playerKey = 'fsd-signal-runner-player';
+    const keys = new Set();
+    const pointer = { active: false, x: width / 2, y: height / 2 };
+    let bestScore = Number(localStorage.getItem(bestKey) || 0);
+    let animationFrame = null;
+    let lastTick = 0;
+    let flashLevel = 0;
+    let rewardFilter = null;
+    const playerOptions = {
+        sakura: {
+            label: '桜',
+            src: 'assets/images/sakura-player.png',
+            accent: '#ff8db8'
+        },
+        mirai: {
+            label: 'ミライ',
+            src: 'assets/images/mirai-player.png',
+            accent: '#69c7ff'
+        },
+        mapai: {
+            label: 'マップAI',
+            src: 'assets/images/mapai-player.png',
+            accent: '#6cf0a4'
+        }
+    };
+
+    Object.values(playerOptions).forEach(option => {
+        option.image = new Image();
+        option.image.src = option.src;
+    });
+
+    const state = {
+        running: false,
+        paused: false,
+        ended: false,
+        score: 0,
+        timeLeft: 30,
+        remainingMs: 30000,
+        roundEndsAt: 0,
+        timerHandle: null,
+        selectedPlayerId: localStorage.getItem(playerKey) || 'sakura',
+        player: createPlayer(),
+        entities: [],
+        particles: [],
+        categoryScore: { ai: 0, geo: 0, simulation: 0 }
+    };
+
+    const typeConfig = {
+        ai: { color: '#5ad9ff', value: 12, radius: 14, label: 'AI案件が強いです。' },
+        geo: { color: '#5eff9c', value: 12, radius: 14, label: '地図 / GIS案件と相性が良いです。' },
+        simulation: { color: '#ffd36c', value: 14, radius: 14, label: 'シミュレーション案件を深掘りしてください。' },
+        glitch: { color: '#ff6f91', value: -10, radius: 16, label: 'Glitch' }
+    };
+
+    if (!playerOptions[state.selectedPlayerId]) {
+        state.selectedPlayerId = 'sakura';
+    }
+
+    bestEl.textContent = String(bestScore);
+    syncCharacterPicker();
+    syncFullscreenButton();
+    syncPauseButtons();
+    updateGameHud();
+    drawGame();
+
+    startButton?.addEventListener('click', handleStartGame);
+    startInlineButton?.addEventListener('click', handleStartGame);
+
+    fullscreenButton?.addEventListener('click', async () => {
+        await toggleFullscreen();
+    });
+
+    exitFullscreenButton?.addEventListener('click', async () => {
+        await toggleFullscreen({ forceExit: true });
+    });
+
+    document.addEventListener('fullscreenchange', () => {
+        syncFullscreenButton();
+    });
+
+    pauseButton?.addEventListener('click', togglePauseState);
+    pauseInlineButton?.addEventListener('click', togglePauseState);
+
+    rewardButton?.addEventListener('click', () => {
+        if (!rewardFilter) {
+            return;
+        }
+
+        window.dispatchEvent(new CustomEvent('fsd:apply-filter', {
+            detail: {
+                filterId: rewardFilter,
+                source: 'signal-runner'
+            }
+        }));
+        flashButtonState(rewardButton, '反映しました');
+    });
+
+    characterGrid?.addEventListener('click', event => {
+        const button = event.target.closest('.game-character-option');
+        const playerId = button?.dataset.player;
+
+        if (!playerId || !playerOptions[playerId]) {
+            return;
+        }
+
+        state.selectedPlayerId = playerId;
+        localStorage.setItem(playerKey, playerId);
+        syncCharacterPicker();
+        drawGame();
+        playSoundEffect('click');
+    });
+
+    function handleStartGame() {
+        startGame();
+        playSoundEffect('click');
+    }
+
+    async function toggleFullscreen({ forceExit = false } = {}) {
+        if (!document.fullscreenEnabled) {
+            flashButtonState(fullscreenButton, '非対応');
+            return;
+        }
+
+        try {
+            if (document.fullscreenElement === gameShell) {
+                if (forceExit || !forceExit) {
+                    await document.exitFullscreen();
+                }
+            } else if (!forceExit) {
+                await gameShell.requestFullscreen();
+            }
+            syncFullscreenButton();
+            playSoundEffect('click');
+        } catch (_) {
+            flashButtonState(fullscreenButton, '失敗');
+        }
+    }
+
+    function togglePauseState() {
+        if (!state.running || state.ended) {
+            return;
+        }
+
+        if (!state.paused) {
+            state.remainingMs = Math.max(0, state.roundEndsAt - Date.now());
+        } else {
+            state.roundEndsAt = Date.now() + state.remainingMs;
+        }
+
+        state.paused = !state.paused;
+        syncPauseButtons();
+        setOverlay(
+            state.paused ? 'Paused' : 'Running',
+            state.paused ? 'ゲームを一時停止しています' : 'ミッション進行中',
+            state.paused ? '再開するとカウントが戻ります。' : 'シグナルを回収して、最も多く集めたカテゴリをアンロックしてください。',
+            !state.paused
+        );
+
+        if (!state.paused) {
+            lastTick = performance.now();
+            animationFrame = requestAnimationFrame(gameLoop);
+        } else if (animationFrame) {
+            cancelAnimationFrame(animationFrame);
+            animationFrame = null;
+        }
+    }
+
+    canvas.addEventListener('mousemove', event => {
+        const point = getCanvasPoint(event, canvas);
+        pointer.active = true;
+        pointer.x = point.x;
+        pointer.y = point.y;
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+        pointer.active = false;
+    });
+
+    canvas.addEventListener('touchstart', event => {
+        const point = getCanvasPoint(event.touches[0], canvas);
+        pointer.active = true;
+        pointer.x = point.x;
+        pointer.y = point.y;
+    }, { passive: true });
+
+    canvas.addEventListener('touchmove', event => {
+        const point = getCanvasPoint(event.touches[0], canvas);
+        pointer.active = true;
+        pointer.x = point.x;
+        pointer.y = point.y;
+    }, { passive: true });
+
+    canvas.addEventListener('touchend', () => {
+        pointer.active = false;
+    }, { passive: true });
+
+    window.addEventListener('keydown', event => {
+        if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) {
+            return;
+        }
+
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(event.key)) {
+            event.preventDefault();
+        }
+
+        if (event.key === ' ' && !state.running) {
+            startGame();
+            return;
+        }
+
+        keys.add(event.key.toLowerCase());
+    });
+
+    window.addEventListener('keyup', event => {
+        keys.delete(event.key.toLowerCase());
+    });
+
+    function startGame() {
+        state.running = true;
+        state.paused = false;
+        state.ended = false;
+        state.score = 0;
+        state.timeLeft = 30;
+        state.remainingMs = 30000;
+        state.roundEndsAt = Date.now() + state.remainingMs;
+        state.player = createPlayer();
+        state.entities = [];
+        state.particles = [];
+        state.categoryScore = { ai: 0, geo: 0, simulation: 0 };
+        rewardFilter = null;
+        flashLevel = 0;
+
+        rewardButton.disabled = true;
+        rewardText.textContent = 'シグナルの傾向から、次に見るべきカテゴリを提案します。';
+        syncPauseButtons();
+        updateGameHud();
+        setOverlay('Mission Live', 'ミッション進行中', 'シグナルを回収して、グリッチを避けてください。', true);
+        startRoundTimer();
+
+        for (let index = 0; index < 7; index += 1) {
+            spawnEntity();
+        }
+
+        lastTick = performance.now();
+        if (animationFrame) {
+            cancelAnimationFrame(animationFrame);
+        }
+        animationFrame = requestAnimationFrame(gameLoop);
+    }
+
+    function endGame() {
+        state.running = false;
+        state.ended = true;
+        state.paused = false;
+        clearRoundTimer();
+        syncPauseButtons();
+
+        if (state.score > bestScore) {
+            bestScore = state.score;
+            localStorage.setItem(bestKey, String(bestScore));
+            bestEl.textContent = String(bestScore);
+        }
+
+        const dominantCategory = Object.entries(state.categoryScore)
+            .sort((left, right) => right[1] - left[1])[0];
+
+        rewardFilter = dominantCategory && dominantCategory[1] > 0 ? dominantCategory[0] : 'ai';
+        const rewardLabels = {
+            ai: 'AI案件を推奨します。桜AI、ミライ、マップAIに寄ってみてください。',
+            geo: '地図 / GIS案件を推奨します。マップAI、FrameArk、小樽マップAIが向いています。',
+            simulation: 'シミュレーション案件を推奨します。MobilityTwin と DTSB を見てください。'
+        };
+
+        rewardText.textContent = rewardLabels[rewardFilter];
+        rewardButton.disabled = false;
+        setOverlay('Round Complete', `スコア ${state.score}`, 'おすすめカテゴリを反映して、相性の良い案件をそのまま絞り込めます。', false);
+        drawGame();
+    }
+
+    function gameLoop(timestamp) {
+        const delta = Math.min((timestamp - lastTick) / 1000, 0.032);
+        lastTick = timestamp;
+
+        if (!state.running || state.paused) {
+            drawGame();
+            return;
+        }
+        updatePlayer(delta);
+        updateEntities(delta);
+        updateParticles(delta);
+        updateGameHud();
+        drawGame();
+
+        animationFrame = requestAnimationFrame(gameLoop);
+    }
+
+    function updatePlayer(delta) {
+        const player = state.player;
+        let ax = 0;
+        let ay = 0;
+        const acceleration = 720;
+
+        if (keys.has('arrowup') || keys.has('w')) {
+            ay -= acceleration;
+        }
+        if (keys.has('arrowdown') || keys.has('s')) {
+            ay += acceleration;
+        }
+        if (keys.has('arrowleft') || keys.has('a')) {
+            ax -= acceleration;
+        }
+        if (keys.has('arrowright') || keys.has('d')) {
+            ax += acceleration;
+        }
+
+        if (pointer.active) {
+            ax += (pointer.x - player.x) * 2.8;
+            ay += (pointer.y - player.y) * 2.8;
+        }
+
+        player.vx += ax * delta;
+        player.vy += ay * delta;
+        player.vx *= 0.9;
+        player.vy *= 0.9;
+        player.x += player.vx * delta;
+        player.y += player.vy * delta;
+
+        player.x = clamp(player.x, player.radius, width - player.radius);
+        player.y = clamp(player.y, player.radius, height - player.radius);
+    }
+
+    function updateEntities(delta) {
+        if (state.entities.length < 8) {
+            spawnEntity();
+        }
+
+        state.entities.forEach(entity => {
+            entity.x += entity.vx * delta;
+            entity.y += entity.vy * delta;
+            entity.phase += delta * entity.phaseSpeed;
+
+            if (entity.x <= entity.radius || entity.x >= width - entity.radius) {
+                entity.vx *= -1;
+            }
+            if (entity.y <= entity.radius || entity.y >= height - entity.radius) {
+                entity.vy *= -1;
+            }
+        });
+
+        state.entities = state.entities.filter(entity => {
+            const collided = isColliding(state.player, entity);
+
+            if (!collided) {
+                return true;
+            }
+
+            if (entity.type === 'glitch') {
+                state.score = Math.max(0, state.score + typeConfig.glitch.value);
+                flashLevel = 1;
+                spawnBurst(entity.x, entity.y, typeConfig.glitch.color, 12);
+            } else {
+                state.score += typeConfig[entity.type].value;
+                state.categoryScore[entity.type] += 1;
+                spawnBurst(entity.x, entity.y, typeConfig[entity.type].color, 10);
+            }
+
+            return false;
+        });
+
+        flashLevel = Math.max(0, flashLevel - delta * 2);
+    }
+
+    function updateParticles(delta) {
+        state.particles = state.particles.filter(particle => {
+            particle.x += particle.vx * delta;
+            particle.y += particle.vy * delta;
+            particle.life -= delta;
+            return particle.life > 0;
+        });
+    }
+
+    function drawGame() {
+        const theme = document.body.getAttribute('data-theme') || 'dark';
+        const palette = getGamePalette(theme);
+        ctx.clearRect(0, 0, width, height);
+
+        ctx.fillStyle = palette.background;
+        ctx.fillRect(0, 0, width, height);
+        drawGrid(palette.grid);
+        drawScanLines(palette.scan);
+        drawPlayer(palette.player);
+        drawEntities();
+        drawParticles();
+
+        if (flashLevel > 0) {
+            ctx.fillStyle = `rgba(255, 111, 145, ${flashLevel * 0.18})`;
+            ctx.fillRect(0, 0, width, height);
+        }
+    }
+
+    function drawGrid(color) {
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+        for (let x = 0; x <= width; x += 54) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, height);
+            ctx.stroke();
+        }
+        for (let y = 0; y <= height; y += 54) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(width, y);
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+
+    function drawScanLines(color) {
+        ctx.save();
+        ctx.fillStyle = color;
+        for (let y = 0; y <= height; y += 6) {
+            ctx.fillRect(0, y, width, 1);
+        }
+        ctx.restore();
+    }
+
+    function drawPlayer(color) {
+        const player = state.player;
+        const gradient = ctx.createRadialGradient(player.x, player.y, 6, player.x, player.y, player.radius * 2.2);
+        gradient.addColorStop(0, color.inner);
+        gradient.addColorStop(1, color.outer);
+
+        ctx.save();
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, player.radius * 1.35, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = color.ring;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        const selectedPlayer = playerOptions[state.selectedPlayerId];
+        const sprite = selectedPlayer?.image;
+
+        if (sprite && sprite.complete && sprite.naturalWidth > 0) {
+            const size = player.radius * 3.4;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius * 1.18, 0, Math.PI * 2);
+            ctx.clip();
+            ctx.drawImage(sprite, player.x - size / 2, player.y - size / 2, size, size);
+            ctx.restore();
+        } else {
+            ctx.fillStyle = color.inner;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius * 0.66, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
+
+    function drawEntities() {
+        state.entities.forEach(entity => {
+            const config = typeConfig[entity.type];
+            const pulse = Math.sin(entity.phase) * 2.5;
+            const radius = entity.radius + pulse;
+            const gradient = ctx.createRadialGradient(entity.x, entity.y, 2, entity.x, entity.y, radius * 1.8);
+            gradient.addColorStop(0, hexToRgba(config.color, 0.95));
+            gradient.addColorStop(1, hexToRgba(config.color, 0.05));
+
+            ctx.save();
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(entity.x, entity.y, radius * 1.8, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = config.color;
+            ctx.beginPath();
+            ctx.arc(entity.x, entity.y, radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            if (entity.type === 'glitch') {
+                ctx.strokeStyle = '#ffd8e1';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(entity.x - radius, entity.y - radius);
+                ctx.lineTo(entity.x + radius, entity.y + radius);
+                ctx.moveTo(entity.x + radius, entity.y - radius);
+                ctx.lineTo(entity.x - radius, entity.y + radius);
+                ctx.stroke();
+            }
+            ctx.restore();
+        });
+    }
+
+    function drawParticles() {
+        state.particles.forEach(particle => {
+            ctx.save();
+            ctx.globalAlpha = particle.life;
+            ctx.fillStyle = particle.color;
+            ctx.beginPath();
+            ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        });
+    }
+
+    function updateGameHud() {
+        scoreEl.textContent = String(Math.round(state.score));
+        timeEl.textContent = String(Math.max(0, Math.ceil(state.timeLeft)));
+        bestEl.textContent = String(bestScore);
+    }
+
+    function setOverlay(label, title, text, isPlaying) {
+        const labelNode = overlay?.querySelector('.game-overlay-label');
+        if (labelNode) {
+            labelNode.textContent = label;
+        }
+        overlayTitle.textContent = title;
+        overlayText.textContent = text;
+        overlay.classList.toggle('is-playing', Boolean(isPlaying));
+    }
+
+    function spawnEntity() {
+        const roll = Math.random();
+        const type = roll < 0.22
+            ? 'glitch'
+            : roll < 0.5
+                ? 'ai'
+                : roll < 0.77
+                    ? 'geo'
+                    : 'simulation';
+        const config = typeConfig[type];
+        state.entities.push({
+            type,
+            radius: config.radius,
+            x: randomBetween(config.radius + 12, width - config.radius - 12),
+            y: randomBetween(config.radius + 12, height - config.radius - 12),
+            vx: randomBetween(-90, 90),
+            vy: randomBetween(-90, 90),
+            phase: Math.random() * Math.PI * 2,
+            phaseSpeed: randomBetween(2, 5)
+        });
+    }
+
+    function spawnBurst(x, y, color, amount) {
+        for (let index = 0; index < amount; index += 1) {
+            state.particles.push({
+                x,
+                y,
+                vx: randomBetween(-140, 140),
+                vy: randomBetween(-140, 140),
+                radius: randomBetween(2, 4),
+                color,
+                life: randomBetween(0.35, 0.9)
+            });
+        }
+    }
+
+    function createPlayer() {
+        return {
+            x: width / 2,
+            y: height / 2,
+            vx: 0,
+            vy: 0,
+            radius: 18
+        };
+    }
+
+    function syncCharacterPicker() {
+        const selectedPlayer = playerOptions[state.selectedPlayerId] || playerOptions.sakura;
+
+        currentPlayerEl.textContent = selectedPlayer.label;
+        canvas.dataset.player = state.selectedPlayerId;
+        characterGrid?.querySelectorAll('.game-character-option').forEach(button => {
+            const isActive = button.dataset.player === state.selectedPlayerId;
+            button.classList.toggle('is-active', isActive);
+            button.setAttribute('aria-pressed', String(isActive));
+        });
+    }
+
+    function syncPauseButtons() {
+        const label = state.paused ? '再開' : '一時停止';
+        if (pauseButton) {
+            pauseButton.textContent = label;
+        }
+        if (pauseInlineButton) {
+            pauseInlineButton.textContent = label;
+        }
+    }
+
+    function syncFullscreenButton() {
+        if (!fullscreenButton) {
+            return;
+        }
+
+        if (!document.fullscreenEnabled) {
+            fullscreenButton.textContent = '全画面非対応';
+            fullscreenButton.disabled = true;
+            return;
+        }
+
+        const isFullscreen = document.fullscreenElement === gameShell;
+        fullscreenButton.textContent = isFullscreen ? '全画面解除' : '全画面';
+        fullscreenButton.setAttribute('aria-pressed', String(isFullscreen));
+        if (exitFullscreenButton) {
+            exitFullscreenButton.disabled = !isFullscreen;
+        }
+    }
+
+    function startRoundTimer() {
+        clearRoundTimer();
+        state.timerHandle = setInterval(() => {
+            if (!state.running || state.paused) {
+                return;
+            }
+
+            state.remainingMs = Math.max(0, state.roundEndsAt - Date.now());
+            state.timeLeft = state.remainingMs / 1000;
+            updateGameHud();
+
+            if (state.remainingMs <= 0) {
+                endGame();
+            }
+        }, 100);
+    }
+
+    function clearRoundTimer() {
+        if (state.timerHandle) {
+            clearInterval(state.timerHandle);
+            state.timerHandle = null;
+        }
     }
 }
 
@@ -155,6 +830,20 @@ function initializeInnovationHub() {
         activeFilter = 'all';
         syncFilterButtons();
         applyFilters();
+    });
+
+    window.addEventListener('fsd:apply-filter', event => {
+        const filterId = event.detail?.filterId;
+
+        if (!filterId) {
+            return;
+        }
+
+        searchInput.value = '';
+        activeFilter = filterId;
+        syncFilterButtons();
+        applyFilters();
+        document.getElementById('projects-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
 
     const hashTarget = window.location.hash.replace('#', '');
@@ -324,19 +1013,6 @@ function initializeInnovationHub() {
         return matchesQuery && matchesFilter;
     }
 
-    function flashButtonState(button, text) {
-        const originalText = button.dataset.originalText || button.textContent;
-
-        button.dataset.originalText = originalText;
-        button.textContent = text;
-        button.classList.add('is-success');
-        clearTimeout(button._flashTimer);
-
-        button._flashTimer = setTimeout(() => {
-            button.textContent = originalText;
-            button.classList.remove('is-success');
-        }, 1400);
-    }
 }
 
 function normalizeText(value) {
@@ -344,6 +1020,111 @@ function normalizeText(value) {
         .toLowerCase()
         .replace(/\s+/g, ' ')
         .trim();
+}
+
+function flashButtonState(button, text) {
+    if (!button) {
+        return;
+    }
+
+    const originalText = button.dataset.originalText || button.textContent;
+
+    button.dataset.originalText = originalText;
+    button.textContent = text;
+    button.classList.add('is-success');
+    clearTimeout(button._flashTimer);
+
+    button._flashTimer = setTimeout(() => {
+        button.textContent = originalText;
+        button.classList.remove('is-success');
+    }, 1400);
+}
+
+function getCanvasPoint(source, canvas) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    return {
+        x: (source.clientX - rect.left) * scaleX,
+        y: (source.clientY - rect.top) * scaleY
+    };
+}
+
+function getGamePalette(theme) {
+    if (theme === 'light') {
+        return {
+            background: '#eef5ff',
+            grid: 'rgba(17, 35, 63, 0.06)',
+            scan: 'rgba(17, 35, 63, 0.02)',
+            player: {
+                inner: 'rgba(13, 110, 253, 0.9)',
+                outer: 'rgba(13, 110, 253, 0.05)',
+                ring: 'rgba(13, 110, 253, 0.6)'
+            }
+        };
+    }
+
+    if (theme === 'sakura') {
+        return {
+            background: '#fff5f8',
+            grid: 'rgba(145, 69, 103, 0.06)',
+            scan: 'rgba(145, 69, 103, 0.02)',
+            player: {
+                inner: 'rgba(255, 93, 162, 0.92)',
+                outer: 'rgba(255, 93, 162, 0.06)',
+                ring: 'rgba(255, 93, 162, 0.58)'
+            }
+        };
+    }
+
+    if (theme === 'neon') {
+        return {
+            background: '#14062e',
+            grid: 'rgba(64, 201, 255, 0.08)',
+            scan: 'rgba(255, 0, 128, 0.03)',
+            player: {
+                inner: 'rgba(255, 0, 128, 0.95)',
+                outer: 'rgba(255, 0, 128, 0.06)',
+                ring: 'rgba(64, 201, 255, 0.72)'
+            }
+        };
+    }
+
+    return {
+        background: '#091121',
+        grid: 'rgba(255, 255, 255, 0.05)',
+        scan: 'rgba(255, 255, 255, 0.02)',
+        player: {
+            inner: 'rgba(108, 199, 255, 0.92)',
+            outer: 'rgba(108, 199, 255, 0.04)',
+            ring: 'rgba(108, 199, 255, 0.66)'
+        }
+    };
+}
+
+function randomBetween(min, max) {
+    return Math.random() * (max - min) + min;
+}
+
+function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+}
+
+function isColliding(a, b) {
+    const dx = a.x - b.x;
+    const dy = a.y - b.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    return distance <= a.radius + b.radius;
+}
+
+function hexToRgba(hex, alpha) {
+    const sanitized = hex.replace('#', '');
+    const bigint = parseInt(sanitized, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 // Core Animation System
@@ -397,12 +1178,15 @@ function initializeAnimations() {
 
 // Enhanced Interactions
 function initializeInteractions() {
-    const productLinks = document.querySelectorAll('.product-link');
+    const productLinks = document.querySelectorAll('a.product-link');
     const productCards = document.querySelectorAll('.product-card');
 
     productLinks.forEach(link => {
         link.addEventListener('click', function (e) {
-            const productName = this.closest('.product-card').querySelector('.product-name').textContent;
+            const card = this.closest('.product-card');
+            const productName = card?.querySelector('.product-name')?.textContent
+                || document.getElementById('spotlight-name')?.textContent
+                || 'Product';
             console.log(`Product accessed: ${productName}`);
 
             createRipple(e, this);

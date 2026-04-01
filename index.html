@@ -138,6 +138,129 @@
                 </aside>
             </section>
 
+            <section class="game-lab" aria-labelledby="game-lab-title">
+                <div class="game-lab-copy">
+                    <p class="game-lab-eyebrow">Playable Layer</p>
+                    <h3 id="game-lab-title">FSD Signal Runner</h3>
+                    <p class="game-lab-lead">
+                        AI、GIS、シミュレーションのシグナルを回収しながら、グリッチを避ける30秒のミニゲームです。
+                        プレイ結果に応じて、下の案件一覧をおすすめカテゴリへ切り替えます。
+                    </p>
+
+                    <div class="game-lab-instructions">
+                        <span>操作: WASD / 矢印キー / マウス移動</span>
+                        <span>目的: シグナル回収で加点、グリッチ接触で減点</span>
+                    </div>
+
+                    <div class="game-character-picker" aria-labelledby="game-character-title">
+                        <div class="game-character-header">
+                            <div>
+                                <p class="game-reward-label">Pilot Select</p>
+                                <p id="game-character-title" class="game-character-title">使用するプレイヤーを選択</p>
+                            </div>
+                            <p class="game-character-current">現在: <span id="game-current-player">桜</span></p>
+                        </div>
+
+                        <div class="game-character-grid" id="game-character-grid">
+                            <button type="button" class="game-character-option" data-player="sakura">
+                                <img src="assets/images/sakura-player.png" alt="桜プレイヤー">
+                                <span>桜</span>
+                            </button>
+                            <button type="button" class="game-character-option" data-player="mirai">
+                                <img src="assets/images/mirai-player.png" alt="ミライプレイヤー">
+                                <span>ミライ</span>
+                            </button>
+                            <button type="button" class="game-character-option" data-player="mapai">
+                                <img src="assets/images/mapai-player.png" alt="マップAIプレイヤー">
+                                <span>マップAI</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="game-lab-controls">
+                        <button type="button" class="product-link" id="game-start">
+                            ミッション開始
+                            <svg class="external-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <polygon points="5,3 19,12 5,21"></polygon>
+                            </svg>
+                        </button>
+                        <button type="button" class="spotlight-secondary" id="game-pause">一時停止</button>
+                        <button type="button" class="spotlight-secondary" id="game-fullscreen">全画面</button>
+                    </div>
+
+                    <div class="game-lab-reward" id="game-reward">
+                        <p class="game-reward-label">Round Insight</p>
+                        <p class="game-reward-text" id="game-reward-text">
+                            プレイ後に、相性の良いカテゴリをこの場で提案します。
+                        </p>
+                        <button type="button" class="spotlight-secondary" id="game-apply-reward" disabled>おすすめカテゴリを見る</button>
+                    </div>
+                </div>
+
+                <div class="game-shell">
+                    <div class="game-hud" aria-label="ゲーム状況">
+                        <article class="game-stat">
+                            <span class="game-stat-label">Score</span>
+                            <span class="game-stat-value" id="game-score">0</span>
+                        </article>
+                        <article class="game-stat">
+                            <span class="game-stat-label">Time</span>
+                            <span class="game-stat-value" id="game-time">30</span>
+                        </article>
+                        <article class="game-stat">
+                            <span class="game-stat-label">Best</span>
+                            <span class="game-stat-value" id="game-best">0</span>
+                        </article>
+                    </div>
+
+                    <div class="game-stage">
+                        <div class="game-stage-toolbar" aria-label="ゲーム操作">
+                            <button type="button" class="game-stage-button game-stage-button-primary" id="game-start-inline">開始</button>
+                            <button type="button" class="game-stage-button" id="game-pause-inline">一時停止</button>
+                            <button type="button" class="game-stage-button" id="game-exit-fullscreen">戻る</button>
+                        </div>
+                        <canvas id="signal-runner" width="900" height="540" aria-label="FSD Signal Runner game area"></canvas>
+                        <div class="game-overlay" id="game-overlay">
+                            <p class="game-overlay-label">Standby</p>
+                            <h4 id="game-overlay-title">ミッションを開始してください</h4>
+                            <p id="game-overlay-text">シグナルを回収して、あなた向けの案件カテゴリをアンロックします。</p>
+                        </div>
+                    </div>
+
+                    <div class="game-legend" aria-label="シグナルガイド">
+                        <div class="game-legend-heading">
+                            <p class="game-reward-label">Signal Guide</p>
+                            <p class="game-legend-title">回収対象と危険要素</p>
+                        </div>
+
+                        <article class="game-chip chip-ai">
+                            <span class="game-chip-badge">+AI適性</span>
+                            <span class="game-chip-label">AIシグナル</span>
+                            <span class="game-chip-text">回収するとAI案件への適性が上がります。</span>
+                        </article>
+
+                        <article class="game-chip chip-geo">
+                            <span class="game-chip-badge">+GIS適性</span>
+                            <span class="game-chip-label">GISシグナル</span>
+                            <span class="game-chip-text">地図・空間分析系のおすすめ度が上がります。</span>
+                        </article>
+
+                        <article class="game-chip chip-sim">
+                            <span class="game-chip-badge">+実験適性</span>
+                            <span class="game-chip-label">シミュレーション</span>
+                            <span class="game-chip-text">交通流や実験系プロジェクトに寄ります。</span>
+                        </article>
+
+                        <article class="game-chip chip-glitch">
+                            <span class="game-chip-badge">-減点</span>
+                            <span class="game-chip-label">グリッチ</span>
+                            <span class="game-chip-text">接触すると減点。できるだけ回避してください。</span>
+                        </article>
+                    </div>
+                </div>
+            </section>
+
             <section class="products-grid" id="projects-grid">
                 <div class="product-card" id="project-sakura-ai" data-categories="ai,voice,search" data-tags="音声対話,知識検索,インターネット検索" data-priority="8">
                     <div class="product-header">
