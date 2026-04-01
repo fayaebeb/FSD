@@ -1,6 +1,7 @@
 // Enhanced Interactive Features & Animations
 document.addEventListener('DOMContentLoaded', function () {
     // Initialize all features
+    initializeFooterYear();
     initializeAnimations();
     initializeInteractions();
     initializeParallax();
@@ -14,6 +15,14 @@ document.addEventListener('DOMContentLoaded', function () {
     initializeAdvancedParticles();
     initializeMagneticButtons();
 });
+
+function initializeFooterYear() {
+    const currentYear = document.getElementById('current-year');
+
+    if (currentYear) {
+        currentYear.textContent = new Date().getFullYear();
+    }
+}
 
 // Core Animation System
 function initializeAnimations() {
@@ -197,6 +206,12 @@ function createParticle(container) {
 }
 
 // Theme Switcher (Dark → Light → Sakura)
+const THEME_SOUNDTRACKS = {
+    dark: 'assets/audio/dark.mp3',
+    light: 'assets/audio/light.mp3',
+    sakura: 'assets/audio/sakura.mp3'
+};
+
 function initializeThemeSwitcher() {
     const themeToggle = document.querySelector('.theme-toggle');
     const themeIcon = document.querySelector('.theme-icon');
@@ -217,6 +232,7 @@ function initializeThemeSwitcher() {
         }
         localStorage.setItem('theme', theme);
         document.body.setAttribute('data-theme', theme);
+        syncThemeSoundtrack(theme);
     }
 
     // Determine initial theme
@@ -372,6 +388,19 @@ function initializeSoundEffects() {
     }
 }
 
+function syncThemeSoundtrack(theme) {
+    const customEl = document.getElementById('custom-sound');
+    const nextSrc = THEME_SOUNDTRACKS[theme] || THEME_SOUNDTRACKS.dark;
+
+    if (!customEl || customEl.getAttribute('src') === nextSrc) {
+        return;
+    }
+
+    customEl.pause();
+    customEl.setAttribute('src', nextSrc);
+    customEl.load();
+}
+
 function playAudioEl(el, { volume = 1.0, rate = 1.0, rewind = true } = {}) {
   if (!el) return;
   try {
@@ -394,7 +423,7 @@ function playSoundEffect(type = 'click') {
   // choose which audio to play
   const hoverEl  = document.getElementById('hover-sound');   // from index.html
   const clickEl  = document.getElementById('click-sound');   // from index.html
-  const customEl = document.getElementById('custom-sound');  // our new music
+  const customEl = document.getElementById('custom-sound');
   
 switch (type) {
     case 'hover':
